@@ -1,0 +1,144 @@
+server:
+  servlet:
+    context-path: /${REPO_NAME}
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH_SERVICE_URL:auth-service}
+          jwk-set-uri: ${AUTH_INTERNAL_SERVICE_URL:${AUTH_SERVICE_URL:auth-service}}/oauth2/jwks
+  mvc:
+    cors:
+      mappings:
+        "[/**]":
+          allowed-origins:
+            - "http://localhost:3000"
+            - "https://fancia.co.uk"
+            - "https://www.fancia.co.uk"
+          allowed-methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - OPTIONS
+          allowed-headers:
+            - Authorization
+            - Content-Type
+            - Accept
+          exposed-headers:
+            - Authorization
+            - Content-Type
+          allow-credentials: true
+          max-age: 3600
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${AWS_RDS_SECRET_NAME:${DATABASE_USERNAME}}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: ${DATABASE_DRIVER:com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver}
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+  cloud:
+    aws:
+      secretsmanager:
+        endpoint: http://localhost:4566
+        region: ${AWS_REGION}
+      credentials:
+        access-key: test
+        secret-key: test
+    kubernetes:
+      discovery:
+        enabled: ${KUBERNETES_ENABLED:true}
+    openfeign:
+      autoconfiguration:
+        jackson:
+          enabled: true
+      client:
+        config:
+          auth-service:
+            url: ${AUTH_SERVICE_URL:#{null}}
+          auth-internal-service:
+            url: ${AUTH_INTERNAL_SERVICE_URL:#{null}}
+          user-service:
+            url: ${USER_SERVICE_URL:#{null}}
+          user-internal-service:
+            url: ${USER_INTERNAL_SERVICE_URL:#{null}}
+          venue-service:
+            url: ${VENUE_SERVICE_URL:#{null}}
+          venue-internal-service:
+            url: ${VENUE_INTERNAL_SERVICE_URL:#{null}}
+          event-service:
+            url: ${EVENT_SERVICE_URL:#{null}}
+          event-internal-service:
+            url: ${EVENT_INTERNAL_SERVICE_URL:#{null}}
+  kafka:
+    listener:
+      auto-startup: false
+    admin:
+      auto-create: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.UUIDSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.fancia.backend.shared.user.core.message,com.fancia.backend.shared.payment.core.message
+    bootstrap-servers: bootstrap.${DOMAIN_NAME}:9094
+  flyway:
+    locations: classpath:db/migration
+    placeholders:
+      gis_admin_password: ${GIS_ADMIN_PASSWORD}
+app:
+  application-name: ${PROJECT_NAME}-backend-${REPO_NAME}
+  base-url: ${DOMAIN_NAME}/${REPO_NAME}/api
+  login-page-url: ${AUTH_SERVICE_URL:auth-service}/login
+  allowed-origins:
+    - "http://localhost:3000"
+    - "https://fancia.co.uk"
+    - "https://www.fancia.co.uk"
+  apple:
+    bundle-id: ${APPLE_BUNDLE_ID:}
+    verify-signature: ${APPLE_VERIFY_SIGNATURE:true}
+    allowed-environments:
+      - Production
+      - Sandbox
+  google:
+    package-name: ${GOOGLE_PACKAGE_NAME:}
+    service-account-json: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:}
+    verify-pubsub-auth: ${GOOGLE_VERIFY_PUBSUB_AUTH:true}
+    pubsub-audience: ${GOOGLE_PUBSUB_AUDIENCE:}
+    pubsub-service-account-email: ${GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL:}
+  stripe:
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    secret-key: ${STRIPE_SECRET_KEY:}
+    verify-signature: ${STRIPE_VERIFY_SIGNATURE:true}
+    price-id: ${STRIPE_PRICE_ID:}
+    trial-period-days: ${STRIPE_TRIAL_PERIOD_DAYS:30}
+    connect:
+      account-country: ${STRIPE_CONNECT_ACCOUNT_COUNTRY:GB}
+      platform-fee-percent: ${STRIPE_PLATFORM_FEE_PERCENT:5}
+      premium-platform-fee-percent: ${STRIPE_PREMIUM_PLATFORM_FEE_PERCENT:2.5}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+
+logging:
+  level:
+    root: DEBUG
+    com.fancia.backend.payment: DEBUG

@@ -1,0 +1,85 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    DOCKER_HUB_USER: "dockerhub:username"
+    DOCKER_HUB_TOKEN: "dockerhub:token"
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto24
+    commands:
+      - echo Logging in to Amazon CodeArtifact...
+      - export ARTIFACT_REPO_URL=https://${DOMAIN_NAME}-${ACCOUNT_ID}.d.codeartifact.${AWS_REGION}.amazonaws.com/maven
+      - export ARTIFACT_REPO_USER=aws
+      - export ARTIFACT_REPO_PASSWORD=$(aws codeartifact get-authorization-token --domain $DOMAIN_NAME --domain-owner $ACCOUNT_ID --region $AWS_REGION --query authorizationToken --output text)
+
+      - echo "Logging in to Docker Hub..."
+      - echo "$DOCKER_HUB_TOKEN" | docker login --username "$DOCKER_HUB_USER" --password-stdin
+
+      - echo Installing dependencies...
+      - ./gradlew dependencies
+
+  pre_build:
+    commands:
+      - echo Cleaning project...
+      - ./gradlew clean
+
+  build:
+    commands:
+      - echo Building Kotlin project...
+      - export SPRING_PROFILES_ACTIVE=dev
+      - |
+        if [ "$USE_EKS" = "true" ]; then
+          ./gradlew build --info --stacktrace
+        else
+          ./gradlew lambdaZip --info --stacktrace
+        fi
+
+  post_build:
+    commands:
+      - |
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ]; then
+          if [ "$USE_EKS" = "true" ]; then
+            echo "Logging in to Amazon ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+        
+            echo "Build successful! Proceeding to Docker push..."
+            docker build -t $PROJECT_NAME-backend-$REPO_NAME:latest .
+            docker tag $PROJECT_NAME-backend-$REPO_NAME:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME-backend-$REPO_NAME:latest
+            docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME-backend-$REPO_NAME:latest
+            echo "Build and publish completed."
+          else
+            echo "Uploading Lambda ZIP to S3..."
+            aws s3 cp build/distributions/*-lambda.zip s3://$PROJECT_NAME-$ENV-backend-artifacts/$REPO_NAME.zip
+
+            FUNCTION_NAME="${PROJECT_NAME}-${ENV}-${REPO_NAME}-api"
+            echo "Updating Lambda function code..."
+            aws lambda update-function-code \
+              --function-name "$FUNCTION_NAME" \
+              --s3-bucket "$PROJECT_NAME-$ENV-backend-artifacts" \
+              --s3-key "$REPO_NAME.zip"
+            echo "Waiting for function update to complete..."
+            aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+            echo "Publishing new Lambda version..."
+            PUBLISHED_VERSION=$(aws lambda publish-version \
+              --function-name "$FUNCTION_NAME" \
+              --query 'Version' \
+              --output text)
+            echo "Published Lambda version: $PUBLISHED_VERSION"
+            echo "Updating 'live' alias..."
+            aws lambda update-alias \
+              --function-name "$FUNCTION_NAME" \
+              --name live \
+              --function-version "$PUBLISHED_VERSION"
+            echo "Deployment completed successfully!"
+          fi
+        else
+          echo "Build failed in a previous phase. Skipping deployment."
+          exit 1
+        fi
+
+artifacts:
+  files:
+    - build/distributions/**/*-lambda.zip
