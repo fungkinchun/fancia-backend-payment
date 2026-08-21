@@ -46,6 +46,11 @@ class StripeConnectClient(
             .setCountry(applicationProperties.stripe.connect.accountCountry)
             .setCapabilities(
                 AccountCreateParams.Capabilities.builder()
+                    .setCardPayments(
+                        AccountCreateParams.Capabilities.CardPayments.builder()
+                            .setRequested(true)
+                            .build(),
+                    )
                     .setTransfers(
                         AccountCreateParams.Capabilities.Transfers.builder()
                             .setRequested(true)
