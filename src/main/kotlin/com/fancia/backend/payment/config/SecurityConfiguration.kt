@@ -36,6 +36,7 @@ class SecurityConfiguration {
         bearerTokenResolver: BearerTokenResolver,
     ): SecurityFilterChain {
         http.authorizeHttpRequests { customizer ->
+            customizer.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             customizer.requestMatchers(HttpMethod.POST, "/api/webhooks/**").permitAll()
             customizer.requestMatchers("/api/connect", "/api/connect/**").authenticated()
             customizer.requestMatchers(HttpMethod.GET, "/internal/connect/accounts/*").permitAll()
@@ -44,7 +45,6 @@ class SecurityConfiguration {
             customizer.requestMatchers(HttpMethod.GET, "/api/**").permitAll()
             customizer.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
             customizer.requestMatchers("/actuator/**").permitAll()
-            customizer.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             customizer.anyRequest().authenticated()
         }.oauth2ResourceServer { oauth2ResourceServer ->
             oauth2ResourceServer.jwt(Customizer.withDefaults())
