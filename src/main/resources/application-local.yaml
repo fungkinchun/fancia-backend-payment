@@ -92,7 +92,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.fancia.backend.shared.user.core.message,com.fancia.backend.shared.payment.core.message
+        spring.json.trusted.packages: com.fancia.backend.shared.user.core.message
     bootstrap-servers: bootstrap.${DOMAIN_NAME}:9094
   flyway:
     locations: classpath:db/migration

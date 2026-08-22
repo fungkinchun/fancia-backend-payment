@@ -20,6 +20,7 @@ class ConnectCheckoutService(
     private val platformFeeCalculator: PlatformFeeCalculator,
     private val stripeConnectedAccountLookup: StripeConnectedAccountLookup,
     private val paymentTransactionService: PaymentTransactionService,
+    private val connectCheckoutFulfillmentService: ConnectCheckoutFulfillmentService,
     private val applicationProperties: ApplicationProperties,
     private val kafkaTemplate: KafkaTemplate<UUID, ConnectCheckoutCompletedEvent>,
 ) {
@@ -99,6 +100,19 @@ class ConnectCheckoutService(
             currency = session.currency?.lowercase() ?: "gbp",
             metadata = session.metadata.orEmpty(),
         )
+
+        runCatching {
+            connectCheckoutFulfillmentService.fulfill(event)
+        }.onFailure {
+            log.error(
+                "Feign fulfillment failed purpose={} resourceId={} session={}; Kafka consumers may retry",
+                purpose,
+                resourceId,
+                session.id,
+                it,
+            )
+        }
+
         try {
             kafkaTemplate.send(CONNECT_CHECKOUTS_TOPIC, buyerUserId, event)
         } catch (ex: Exception) {
