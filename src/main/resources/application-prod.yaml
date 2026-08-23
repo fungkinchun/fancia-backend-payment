@@ -13,7 +13,7 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${AUTH_SERVICE_URL:auth-service}
-          jwk-set-uri: ${AUTH_INTERNAL_SERVICE_URL:${AUTH_SERVICE_URL:auth-service}}/oauth2/jwks
+          jwk-set-uri: ${AUTH_SERVICE_URL:auth-service}/oauth2/jwks
   mvc:
     cors:
       mappings:
