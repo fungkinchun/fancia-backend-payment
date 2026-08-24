@@ -82,7 +82,6 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus:1.16.4")
     implementation("org.springframework.boot:spring-boot-starter-flyway:4.0.5")
     implementation("org.flywaydb:flyway-database-postgresql")
-    implementation("org.crac:crac:1.5.0")
     // Apple JWS + Google Pub/Sub OIDC
     implementation("com.nimbusds:nimbus-jose-jwt:9.40")
     // Google Play Developer API
