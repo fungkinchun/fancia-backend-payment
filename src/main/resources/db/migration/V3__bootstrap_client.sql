@@ -1,0 +1,30 @@
+insert into clients (
+    id,
+    client_id,
+    client_name,
+    client_secret,
+    client_id_issued_at,
+    client_secret_expires_at,
+    authorization_grant_types,
+    client_authentication_methods,
+    post_logout_redirect_uris,
+    redirect_uris,
+    scopes,
+    client_settings,
+    token_settings
+)
+values (
+    gen_random_uuid()::text,
+    'oidc-client',
+    'oidc-client',
+    null,
+    null,
+    null,
+    'refresh_token,client_credentials,authorization_code',
+    'client_secret_post,none,client_secret_basic',
+    'https://www.fancia.co.uk/,https://fancia.co.uk/,fancia://oauth/logout',
+    'https://www.fancia.co.uk/login/oauth2/code/oidc-client,fancia://oauth/callback,https://fancia.co.uk/login/oauth2/code/oidc-client,http://localhost:3000/login/oauth2/code/oidc-client',
+    'openid,profile,client.create,client.read,email',
+    '{"@class":"java.util.Collections$UnmodifiableMap","settings.client.require-proof-key":true,"settings.client.require-authorization-consent":false}',
+    '{"@class":"java.util.Collections$UnmodifiableMap","settings.token.reuse-refresh-tokens":false,"settings.token.x509-certificate-bound-access-tokens":false,"settings.token.id-token-signature-algorithm":["org.springframework.security.oauth2.jose.jws.SignatureAlgorithm","RS256"],"settings.token.access-token-time-to-live":["java.time.Duration","PT168H"],"settings.token.access-token-format":{"@class":"org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat","value":"self-contained"},"settings.token.refresh-token-time-to-live":["java.time.Duration","PT720H"],"settings.token.authorization-code-time-to-live":["java.time.Duration","PT168H"],"settings.token.device-code-time-to-live":["java.time.Duration","PT168H"]}'
+);

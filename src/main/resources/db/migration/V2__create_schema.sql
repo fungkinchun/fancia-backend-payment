@@ -1,4 +1,4 @@
--- Consolidated schema baseline (former V2–V18). Fresh installs only; do not alter checksums on existing DBs without a Flyway reset.
+-- Consolidated schema baseline (V2–V10). Fresh installs only; reset Flyway history after squash.
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
@@ -34,6 +34,8 @@ create table "users" (
     visibility varchar(16) not null default 'PUBLIC' check (visibility in ('PUBLIC', 'PRIVATE')),
     premium_active boolean not null default false,
     premium_expires_at timestamp without time zone,
+    slug varchar(255),
+    slug_changed_at timestamp(6),
     primary key (id)
 );
 comment on column "users".deleted is 'Soft-delete indicator';
@@ -56,6 +58,29 @@ alter table if exists "authorizations" add constraint FK4ehcr3h1eun20h36is62nal6
 alter table if exists password_reset_tokens add constraint FKrjxrqd0dudi212f0469dojcod foreign key ("user_id") references "users";
 alter table if exists uploaded_file add constraint FKqhosch3tnq7i2it0mea57ts4m foreign key ("user_id") references "users";
 alter table if exists user_connected_accounts add constraint FKnnce63ye8wbmdskoeco5ku43d foreign key (user_id) references "users";
+create table stripe_connected_accounts (
+    id uuid not null,
+    country varchar(2),
+    default_currency varchar(8),
+    charges_enabled boolean not null default false,
+    payouts_enabled boolean not null default false,
+    details_submitted boolean not null default false,
+    disabled_reason varchar(255),
+    onboarded_at timestamp without time zone,
+    raw_payload text,
+    updated_at timestamp without time zone,
+    constraint stripe_connected_accounts_pkey primary key (id),
+    constraint fk_stripe_connected_accounts_user_connected_account
+        foreign key (id) references user_connected_accounts (id) on delete cascade
+);
+
+create unique index uk_user_connected_accounts_stripe_user
+    on user_connected_accounts (user_id)
+    where deleted = false and provider = 'stripe';
+
+create unique index uk_user_connected_accounts_stripe_provider_id
+    on user_connected_accounts (provider_id)
+    where deleted = false and provider = 'stripe';
 alter table if exists user_links add constraint FK4wc3hhebo87m149hnxkxxmfvm foreign key (user_id) references "users";
 alter table if exists user_tags add constraint FK_user_tags_user foreign key (user_id) references "users";
 alter table if exists user_settings add constraint FK_user_settings_user foreign key (user_id) references "users";
@@ -75,7 +100,7 @@ alter table if exists comment_likes add constraint FK3wa5u7bs1p1o9hmavtgdgk1go f
 alter table if exists post_likes add constraint FKa5wxsgl4doibhbed9gm7ikie2 foreign key (post_id) references posts;
 alter table if exists post_media add constraint FK1urcum9dtf0vgul7k405f4r2d foreign key (post_id) references posts;
 
-create table interest_groups (deleted boolean not null, created_at timestamp(6), created_by uuid, id uuid not null, description varchar(4000) not null, name varchar(255) not null, primary key (id));
+create table interest_groups (deleted boolean not null, created_at timestamp(6), created_by uuid, id uuid not null, description varchar(4000) not null, name varchar(255) not null, slug varchar(255) not null, primary key (id));
 comment on column interest_groups.deleted is 'Soft-delete indicator';
 create table interest_group_links (interest_group_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK'))), url varchar(255) not null, primary key (interest_group_id, type, url));
 create table interest_group_membership (joined_at timestamp(6), interest_group_id uuid not null, user_id uuid not null, role varchar(255) check ((role in ('ADMIN','MEMBER'))), status varchar(255) check ((status in ('ACCEPTED','PENDING','DENIED','WITHDREW','BANNED'))), primary key (interest_group_id, user_id));
@@ -84,7 +109,7 @@ alter table if exists interest_group_links add constraint FK3519psi1d5n0prhs7ect
 alter table if exists interest_group_membership add constraint FK969x3gmh9kq16vevdr74h0t3g foreign key (interest_group_id) references interest_groups;
 alter table if exists interest_group_tags add constraint FKcbscsmlvmrmdqc0ih8c6dlgkk foreign key (interest_group_id) references interest_groups;
 
-create table venues (deleted boolean not null, latitude double precision, longitude double precision, created_at timestamp(6), created_by uuid, id uuid not null, postcode varchar(50), country varchar(100), address_line varchar(500), location_label varchar(500), description varchar(4000) not null, city varchar(255), name varchar(255) not null, place_id varchar(255), primary key (id));
+create table venues (deleted boolean not null, latitude double precision, longitude double precision, created_at timestamp(6), created_by uuid, id uuid not null, postcode varchar(50), country varchar(100), address_line varchar(500), location_label varchar(500), description varchar(4000) not null, city varchar(255), name varchar(255) not null, slug varchar(255) not null, place_id varchar(255), primary key (id));
 comment on column venues.deleted is 'Soft-delete indicator';
 create table venue_links (venue_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK','ZOOM','TEAMS','GOOGLE_MEET'))), url varchar(255) not null, primary key (venue_id, type, url));
 create table venue_staff (joined_at timestamp(6), venue_id uuid not null, user_id uuid not null, role varchar(255) check ((role in ('ADMIN','MEMBER'))), status varchar(255) check ((status in ('ACCEPTED','PENDING','DENIED','WITHDREW','BANNED'))), primary key (venue_id, user_id));
@@ -95,6 +120,99 @@ alter table if exists venue_tags add constraint FKvenue_tags_venue foreign key (
 create index venues_geo_idx on venues using gist (
     geography(st_setsrid(st_makepoint(longitude, latitude), 4326))
 ) where latitude is not null and longitude is not null and deleted = false;
+
+create table venue_slots (
+    id uuid not null,
+    created_by uuid,
+    created_at timestamp(6) without time zone,
+    deleted boolean not null default false,
+    venue_id uuid not null,
+    start_time timestamp(6) without time zone not null,
+    end_time timestamp(6) without time zone not null,
+    price_minor bigint not null default 0,
+    currency varchar(8) not null default 'gbp',
+    status varchar(32) not null,
+    constraint venue_slots_pkey primary key (id),
+    constraint fk_venue_slots_venue foreign key (venue_id) references venues (id),
+    constraint venue_slots_status_check check (status in ('DRAFT', 'PUBLISHED', 'BOOKED', 'CANCELLED')),
+    constraint venue_slots_time_check check (end_time > start_time),
+    constraint venue_slots_price_check check (price_minor >= 0)
+);
+create index idx_venue_slots_venue_id
+    on venue_slots (venue_id)
+    where deleted = false;
+create index idx_venue_slots_venue_status_start
+    on venue_slots (venue_id, status, start_time)
+    where deleted = false;
+
+create table venue_areas (
+    id uuid not null,
+    created_by uuid,
+    created_at timestamp(6) without time zone,
+    deleted boolean not null default false,
+    venue_id uuid not null,
+    name varchar(255) not null,
+    price_minor bigint not null default 0,
+    currency varchar(8) not null default 'gbp',
+    capacity integer,
+    sort_order integer not null default 0,
+    constraint venue_areas_pkey primary key (id),
+    constraint fk_venue_areas_venue foreign key (venue_id) references venues (id),
+    constraint venue_areas_price_check check (price_minor >= 0),
+    constraint venue_areas_capacity_check check (capacity is null or capacity > 0)
+);
+create index idx_venue_areas_venue_id
+    on venue_areas (venue_id)
+    where deleted = false;
+create unique index uk_venue_areas_venue_name_active
+    on venue_areas (venue_id, name)
+    where deleted = false;
+
+create table venue_bookings (
+    id uuid not null,
+    created_by uuid,
+    created_at timestamp(6) without time zone,
+    deleted boolean not null default false,
+    venue_id uuid not null,
+    slot_id uuid not null,
+    requester_user_id uuid not null,
+    status varchar(32) not null,
+    price_minor bigint not null,
+    currency varchar(8) not null default 'gbp',
+    stripe_checkout_session_id varchar(255),
+    paid_at timestamp(6) without time zone,
+    area_id uuid,
+    constraint venue_bookings_pkey primary key (id),
+    constraint fk_venue_bookings_venue foreign key (venue_id) references venues (id),
+    constraint fk_venue_bookings_slot foreign key (slot_id) references venue_slots (id),
+    constraint fk_venue_bookings_area foreign key (area_id) references venue_areas (id),
+    constraint venue_bookings_status_check check (
+        status in (
+            'REQUESTED',
+            'PAID',
+            'ACCEPTED',
+            'DENIED',
+            'WITHDRAWN',
+            'EXPIRED'
+        )
+    ),
+    constraint venue_bookings_price_check check (price_minor >= 0)
+);
+create index idx_venue_bookings_venue_id
+    on venue_bookings (venue_id)
+    where deleted = false;
+create index idx_venue_bookings_slot_id
+    on venue_bookings (slot_id)
+    where deleted = false;
+create index idx_venue_bookings_requester
+    on venue_bookings (requester_user_id)
+    where deleted = false;
+create index idx_venue_bookings_venue_status
+    on venue_bookings (venue_id, status)
+    where deleted = false;
+create index idx_venue_bookings_area_id
+    on venue_bookings (area_id)
+    where deleted = false and area_id is not null;
 
 create table events (
     deleted boolean not null,
@@ -120,6 +238,7 @@ create table events (
     recurrence_days_mask smallint not null default 0,
     recurrence_paused_until timestamp(6) with time zone,
     approval_required boolean not null default true,
+    slug varchar(255) not null,
     primary key (id)
 );
 comment on column events.deleted is 'Soft-delete indicator';
@@ -150,15 +269,60 @@ create table event_participants (
     primary key (occurrence_id, user_id),
     constraint fk_event_participants_occurrence foreign key (occurrence_id) references event_occurrences (id)
 );
+create table event_ticket_tiers (
+    id uuid not null,
+    created_by uuid,
+    created_at timestamp(6) without time zone,
+    deleted boolean not null default false,
+    event_id uuid not null,
+    name varchar(255) not null,
+    price_minor bigint not null default 0,
+    currency varchar(8) not null default 'gbp',
+    capacity_per_occurrence integer,
+    sort_order integer not null default 0,
+    check_in_before_minutes integer not null default 120,
+    check_in_after_minutes integer not null default 60,
+    constraint event_ticket_tiers_pkey primary key (id),
+    constraint fk_event_ticket_tiers_event foreign key (event_id) references events (id),
+    constraint event_ticket_tiers_price_check check (price_minor >= 0),
+    constraint event_ticket_tiers_capacity_check
+        check (capacity_per_occurrence is null or capacity_per_occurrence > 0),
+    constraint event_ticket_tiers_check_in_before_check
+        check (check_in_before_minutes >= 0),
+    constraint event_ticket_tiers_check_in_after_check
+        check (check_in_after_minutes >= 0)
+);
+create index idx_event_ticket_tiers_event_id
+    on event_ticket_tiers (event_id)
+    where deleted = false;
+
 create table reservations (
     guests integer not null,
     occurrence_id uuid not null,
     user_id uuid not null,
     payload varchar(4000),
-    status varchar(255) check ((status in ('PENDING','ACCEPTED','WHITELIST','DENIED','WITHDREW'))),
+    status varchar(255) check ((status in ('PENDING','PAID','ACCEPTED','WHITELIST','DENIED','WITHDREW'))),
+    tier_id uuid,
+    price_minor bigint,
+    currency varchar(8),
+    stripe_checkout_session_id varchar(255),
+    paid_at timestamp(6) without time zone,
+    check_in_token varchar(64),
+    checked_in_at timestamp(6) without time zone,
+    checked_in_by uuid,
     primary key (occurrence_id, user_id),
-    constraint fk_reservations_occurrence foreign key (occurrence_id) references event_occurrences (id)
+    constraint fk_reservations_occurrence foreign key (occurrence_id) references event_occurrences (id),
+    constraint fk_reservations_tier foreign key (tier_id) references event_ticket_tiers (id)
 );
+create index idx_reservations_tier_occurrence
+    on reservations (tier_id, occurrence_id)
+    where tier_id is not null;
+create unique index uk_reservations_check_in_token
+    on reservations (check_in_token)
+    where check_in_token is not null;
+create index idx_reservations_occurrence_accepted_token
+    on reservations (occurrence_id)
+    where status = 'ACCEPTED' and check_in_token is not null;
 alter table if exists event_interest_groups add constraint FK9pyxt3n5c0gtivo6y3nxyw5fg foreign key (event_id) references events;
 alter table if exists event_venues add constraint FKevent_venues_event foreign key (event_id) references events;
 alter table if exists event_tags add constraint FKiwoyitw224ykom58m5xnoa9y6 foreign key (event_id) references events;
@@ -352,3 +516,17 @@ create unique index uk_chat_channel_members_channel_user
     where deleted = false;
 create index chat_channel_members_user_id_idx on chat_channel_members (user_id);
 create index chat_channel_members_chat_channel_id_idx on chat_channel_members (chat_channel_id);
+
+create unique index uk_events_slug on events (slug) where deleted = false;
+create unique index uk_venues_slug on venues (slug) where deleted = false;
+create unique index uk_interest_groups_slug on interest_groups (slug) where deleted = false;
+create unique index uk_users_slug on users (slug) where deleted = false and slug is not null;
+
+create table user_slug_history (
+    slug varchar(255) not null,
+    user_id uuid not null,
+    created_at timestamp(6) not null default now(),
+    constraint user_slug_history_pkey primary key (slug),
+    constraint fk_user_slug_history_user foreign key (user_id) references users (id)
+);
+create index idx_user_slug_history_user_id on user_slug_history (user_id);
