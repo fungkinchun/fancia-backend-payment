@@ -318,6 +318,11 @@ class StripeClient(
             .setClientReferenceId(buyerUserId.toString())
             .addLineItem(lineItem)
             .setPaymentIntentData(paymentIntentData.build())
+            .setManagedPayments(
+                SessionCreateParams.ManagedPayments.builder()
+                    .setEnabled(false)
+                    .build(),
+            )
         metadata.forEach { (k, v) -> paramsBuilder.putMetadata(k, v) }
         paramsBuilder.putMetadata("userId", buyerUserId.toString())
 
