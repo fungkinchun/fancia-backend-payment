@@ -118,6 +118,16 @@ class PaymentTransactionService(
         paymentTransactionRepository.save(tx)
     }
 
+    @Transactional
+    fun markConnectCheckoutRefunded(checkoutSessionId: String) {
+        val tx = paymentTransactionRepository
+            .findByProviderAndProviderTransactionId(PaymentProvider.STRIPE, checkoutSessionId)
+            .orElse(null)
+            ?: return
+        tx.status = "REFUNDED"
+        paymentTransactionRepository.save(tx)
+    }
+
     private fun syncStripeInvoices(userId: UUID) {
         val stripeSub = subscriptionRepository.findByUserId(userId)
             .firstOrNull { it.provider == PaymentProvider.STRIPE && !it.providerSubscriptionId.isNullOrBlank() }

@@ -1,6 +1,7 @@
 package com.fancia.backend.payment.core.controller
 
 import com.fancia.backend.payment.core.service.ConnectCheckoutService
+import com.fancia.backend.payment.core.service.PaymentTransactionService
 import com.fancia.backend.payment.core.support.stripe.StripeClient
 import com.fancia.backend.shared.payment.core.dto.ConnectCheckoutResponse
 import com.fancia.backend.shared.payment.core.dto.CreateConnectCheckoutSessionRequest
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 class ConnectCheckoutInternalController(
     private val connectCheckoutService: ConnectCheckoutService,
     private val stripeClient: StripeClient,
+    private val paymentTransactionService: PaymentTransactionService,
 ) {
     @Operation(summary = "Create a destination-charge Checkout Session from a domain service")
     @PostMapping("/sessions")
@@ -32,6 +34,7 @@ class ConnectCheckoutInternalController(
     @PostMapping("/refunds")
     fun refund(@RequestBody @Valid request: RefundConnectCheckoutRequest): ResponseEntity<Void> {
         stripeClient.refundConnectCheckoutSession(request.checkoutSessionId)
+        paymentTransactionService.markConnectCheckoutRefunded(request.checkoutSessionId)
         return ResponseEntity.noContent().build()
     }
 }
