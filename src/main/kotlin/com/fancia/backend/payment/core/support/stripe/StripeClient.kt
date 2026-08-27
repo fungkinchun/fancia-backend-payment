@@ -1,8 +1,16 @@
 package com.fancia.backend.payment.core.support.stripe
 
 import com.fancia.backend.payment.config.ApplicationProperties
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutAmountMustBePositiveException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutAmountTooSmallException
 import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutInvalidApplicationFeeException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutProviderFailedException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutRefundFailedException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutRefundMissingPaymentIntentException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutSessionUrlMissingException
 import com.fancia.backend.shared.payment.core.exception.SubscriptionBillingException
+import com.fancia.backend.shared.payment.core.util.StripeMinAmounts
 import com.fancia.backend.shared.user.core.enums.PaymentProvider
 import com.fancia.backend.shared.user.core.enums.SubscriptionStatus
 import com.fancia.backend.shared.user.core.exception.InvalidStripeNotificationException
@@ -280,10 +288,16 @@ class StripeClient(
     ): Pair<String, String> {
         val provider = PaymentProvider.STRIPE
         if (amountMinor <= 0L) {
-            throw ConnectCheckoutException(message = "Checkout amount must be greater than zero")
+            throw ConnectCheckoutAmountMustBePositiveException()
+        }
+        if (!StripeMinAmounts.meetsCheckoutMinimum(amountMinor, currency)) {
+            throw ConnectCheckoutAmountTooSmallException(
+                message = "Checkout amount must be at least ${StripeMinAmounts.formatMinimum(currency)} " +
+                    "(Stripe card payment minimum)",
+            )
         }
         if (applicationFeeMinor < 0L || applicationFeeMinor >= amountMinor) {
-            throw ConnectCheckoutException(message = "Invalid application fee for destination charge")
+            throw ConnectCheckoutInvalidApplicationFeeException()
         }
 
         val lineItem = SessionCreateParams.LineItem.builder()
@@ -329,7 +343,9 @@ class StripeClient(
         return try {
             val session = Session.create(paramsBuilder.build(), requestOptions())
             val url = session.url
-                ?: throw ConnectCheckoutException(message = "Checkout session missing url for provider: $provider")
+                ?: throw ConnectCheckoutSessionUrlMissingException(
+                    message = "Checkout session missing url for provider: $provider",
+                )
             url to session.id
         } catch (ex: ConnectCheckoutException) {
             throw ex
@@ -340,7 +356,7 @@ class StripeClient(
                 destinationAccountId,
                 ex,
             )
-            throw ConnectCheckoutException(
+            throw ConnectCheckoutProviderFailedException(
                 message = "Checkout failed for provider: $provider: ${ex.message}",
             )
         }
@@ -350,7 +366,7 @@ class StripeClient(
         try {
             val session = Session.retrieve(checkoutSessionId, requestOptions())
             val paymentIntentId = session.paymentIntent
-                ?: throw ConnectCheckoutException(message = "Checkout session has no payment intent to refund")
+                ?: throw ConnectCheckoutRefundMissingPaymentIntentException()
             com.stripe.model.Refund.create(
                 com.stripe.param.RefundCreateParams.builder()
                     .setPaymentIntent(paymentIntentId)
@@ -363,7 +379,7 @@ class StripeClient(
             throw ex
         } catch (ex: Exception) {
             log.warn("Stripe refund failed session={}", checkoutSessionId, ex)
-            throw ConnectCheckoutException(message = "Refund failed: ${ex.message}")
+            throw ConnectCheckoutRefundFailedException(message = "Refund failed: ${ex.message}")
         }
     }
 

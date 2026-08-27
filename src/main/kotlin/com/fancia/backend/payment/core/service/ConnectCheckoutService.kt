@@ -4,8 +4,13 @@ import com.fancia.backend.payment.config.ApplicationProperties
 import com.fancia.backend.payment.core.support.stripe.StripeClient
 import com.fancia.backend.shared.payment.core.dto.ConnectCheckoutResponse
 import com.fancia.backend.shared.payment.core.dto.CreateConnectCheckoutSessionRequest
-import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutAmountMustBePositiveException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutAmountTooSmallException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutInvalidRedirectSchemeException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutInvalidRedirectUrlException
+import com.fancia.backend.shared.payment.core.exception.ConnectCheckoutRedirectOriginNotAllowedException
 import com.fancia.backend.shared.payment.core.message.ConnectCheckoutCompletedEvent
+import com.fancia.backend.shared.payment.core.util.StripeMinAmounts
 import com.stripe.model.checkout.Session
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.core.KafkaTemplate
@@ -30,7 +35,13 @@ class ConnectCheckoutService(
         validateRedirectUrl(request.successUrl, "successUrl")
         validateRedirectUrl(request.cancelUrl, "cancelUrl")
         if (request.amountMinor <= 0L) {
-            throw ConnectCheckoutException(message = "Checkout amount must be greater than zero")
+            throw ConnectCheckoutAmountMustBePositiveException()
+        }
+        if (!StripeMinAmounts.meetsCheckoutMinimum(request.amountMinor, request.currency)) {
+            throw ConnectCheckoutAmountTooSmallException(
+                message = "Checkout amount must be at least ${StripeMinAmounts.formatMinimum(request.currency)} " +
+                    "(Stripe card payment minimum)",
+            )
         }
 
         val destination = stripeConnectedAccountLookup.requirePayoutReadyAccountId(request.sellerUserId)
@@ -131,7 +142,7 @@ class ConnectCheckoutService(
         val uri = try {
             URI(url)
         } catch (_: Exception) {
-            throw ConnectCheckoutException(message = "$field is not a valid URL")
+            throw ConnectCheckoutInvalidRedirectUrlException(message = "$field is not a valid URL")
         }
         when (uri.scheme?.lowercase()) {
             "http", "https" -> {
@@ -140,11 +151,15 @@ class ConnectCheckoutService(
                 if (allowed.isNotEmpty() &&
                     allowed.none { origin.equals(it.trimEnd('/'), ignoreCase = true) }
                 ) {
-                    throw ConnectCheckoutException(message = "$field origin is not allowed")
+                    throw ConnectCheckoutRedirectOriginNotAllowedException(
+                        message = "$field origin is not allowed",
+                    )
                 }
             }
             "fancia" -> Unit
-            else -> throw ConnectCheckoutException(message = "$field must be http(s) or fancia://")
+            else -> throw ConnectCheckoutInvalidRedirectSchemeException(
+                message = "$field must be http(s) or fancia://",
+            )
         }
     }
 
