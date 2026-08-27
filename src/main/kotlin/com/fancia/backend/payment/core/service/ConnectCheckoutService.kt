@@ -35,9 +35,23 @@ class ConnectCheckoutService(
         validateRedirectUrl(request.successUrl, "successUrl")
         validateRedirectUrl(request.cancelUrl, "cancelUrl")
         if (request.amountMinor <= 0L) {
+            log.error(
+                "Connect Checkout rejected: amount must be > 0 purpose={} amountMinor={} currency={}",
+                request.purpose,
+                request.amountMinor,
+                request.currency,
+            )
             throw ConnectCheckoutAmountMustBePositiveException()
         }
         if (!StripeMinAmounts.meetsCheckoutMinimum(request.amountMinor, request.currency)) {
+            log.error(
+                "Connect Checkout rejected: amount below Stripe minimum purpose={} amountMinor={} " +
+                    "currency={} minimum={}",
+                request.purpose,
+                request.amountMinor,
+                request.currency,
+                StripeMinAmounts.minMinor(request.currency),
+            )
             throw ConnectCheckoutAmountTooSmallException(
                 message = "Checkout amount must be at least ${StripeMinAmounts.formatMinimum(request.currency)} " +
                     "(Stripe card payment minimum)",

@@ -288,15 +288,34 @@ class StripeClient(
     ): Pair<String, String> {
         val provider = PaymentProvider.STRIPE
         if (amountMinor <= 0L) {
+            log.error(
+                "Stripe Connect Checkout rejected: amount must be > 0 amountMinor={} currency={}",
+                amountMinor,
+                currency,
+            )
             throw ConnectCheckoutAmountMustBePositiveException()
         }
         if (!StripeMinAmounts.meetsCheckoutMinimum(amountMinor, currency)) {
+            log.error(
+                "Stripe Connect Checkout rejected: amount below Stripe minimum amountMinor={} " +
+                    "currency={} minimum={}",
+                amountMinor,
+                currency,
+                StripeMinAmounts.minMinor(currency),
+            )
             throw ConnectCheckoutAmountTooSmallException(
                 message = "Checkout amount must be at least ${StripeMinAmounts.formatMinimum(currency)} " +
                     "(Stripe card payment minimum)",
             )
         }
         if (applicationFeeMinor < 0L || applicationFeeMinor >= amountMinor) {
+            log.error(
+                "Stripe Connect Checkout rejected: invalid application fee amountMinor={} " +
+                    "applicationFeeMinor={} currency={}",
+                amountMinor,
+                applicationFeeMinor,
+                currency,
+            )
             throw ConnectCheckoutInvalidApplicationFeeException()
         }
 
