@@ -76,6 +76,16 @@ class PaymentTransactionService(
         tx.rawPayload = invoice.toJson()
 
         paymentTransactionRepository.save(tx)
+        log.info(
+            "Payment transaction upserted source=invoice id={} userId={} providerTxId={} " +
+                "amountCents={} currency={} status={}",
+            tx.id,
+            tx.userId,
+            tx.providerTransactionId,
+            tx.amountCents,
+            tx.currency,
+            tx.status,
+        )
     }
 
     @Transactional
@@ -116,6 +126,17 @@ class PaymentTransactionService(
         }
         tx.rawPayload = session.toJson()
         paymentTransactionRepository.save(tx)
+        log.info(
+            "Payment transaction upserted source=connect_checkout id={} userId={} providerTxId={} " +
+                "purpose={} amountCents={} currency={} status={}",
+            tx.id,
+            tx.userId,
+            tx.providerTransactionId,
+            purpose,
+            tx.amountCents,
+            tx.currency,
+            tx.status,
+        )
     }
 
     @Transactional
@@ -126,6 +147,14 @@ class PaymentTransactionService(
             ?: return
         tx.status = "REFUNDED"
         paymentTransactionRepository.save(tx)
+        log.info(
+            "Payment transaction refunded id={} userId={} providerTxId={} amountCents={} currency={}",
+            tx.id,
+            tx.userId,
+            tx.providerTransactionId,
+            tx.amountCents,
+            tx.currency,
+        )
     }
 
     private fun syncStripeInvoices(userId: UUID) {

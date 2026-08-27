@@ -46,6 +46,17 @@ class ConnectCheckoutService(
 
         val destination = stripeConnectedAccountLookup.requirePayoutReadyAccountId(request.sellerUserId)
         val fee = platformFeeCalculator.applicationFeeMinor(request.sellerUserId, request.amountMinor)
+        log.info(
+            "Creating Connect Checkout purpose={} resourceId={} buyer={} seller={} amountMinor={} " +
+                "applicationFeeMinor={} currency={}",
+            request.purpose,
+            request.resourceId,
+            request.buyerUserId,
+            request.sellerUserId,
+            request.amountMinor,
+            fee,
+            request.currency,
+        )
         val metadata = linkedMapOf(
             "purpose" to request.purpose,
             "resourceId" to request.resourceId,
@@ -101,14 +112,29 @@ class ConnectCheckoutService(
             purpose = purpose,
         )
 
+        val amountMinor = session.amountTotal ?: 0L
+        val currency = session.currency?.lowercase() ?: "gbp"
+        log.info(
+            "Connect Checkout completed purpose={} resourceId={} session={} buyer={} seller={} " +
+                "amountMinor={} currency={} paymentStatus={}",
+            purpose,
+            resourceId,
+            session.id,
+            buyerUserId,
+            sellerUserId,
+            amountMinor,
+            currency,
+            session.paymentStatus,
+        )
+
         val event = ConnectCheckoutCompletedEvent(
             purpose = purpose,
             resourceId = resourceId,
             buyerUserId = buyerUserId,
             sellerUserId = sellerUserId,
             checkoutSessionId = session.id,
-            amountMinor = session.amountTotal ?: 0L,
-            currency = session.currency?.lowercase() ?: "gbp",
+            amountMinor = amountMinor,
+            currency = currency,
             metadata = session.metadata.orEmpty(),
         )
 
