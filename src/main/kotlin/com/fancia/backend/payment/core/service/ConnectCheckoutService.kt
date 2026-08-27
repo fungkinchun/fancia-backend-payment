@@ -46,7 +46,7 @@ class ConnectCheckoutService(
 
         val destination = stripeConnectedAccountLookup.requirePayoutReadyAccountId(request.sellerUserId)
         val fee = platformFeeCalculator.applicationFeeMinor(request.sellerUserId, request.amountMinor)
-        log.info(
+        log.error(
             "Creating Connect Checkout purpose={} resourceId={} buyer={} seller={} amountMinor={} " +
                 "applicationFeeMinor={} currency={}",
             request.purpose,
@@ -114,7 +114,7 @@ class ConnectCheckoutService(
 
         val amountMinor = session.amountTotal ?: 0L
         val currency = session.currency?.lowercase() ?: "gbp"
-        log.info(
+        log.error(
             "Connect Checkout completed purpose={} resourceId={} session={} buyer={} seller={} " +
                 "amountMinor={} currency={} paymentStatus={}",
             purpose,

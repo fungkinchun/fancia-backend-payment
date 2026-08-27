@@ -76,7 +76,7 @@ class PaymentTransactionService(
         tx.rawPayload = invoice.toJson()
 
         paymentTransactionRepository.save(tx)
-        log.info(
+        log.error(
             "Payment transaction upserted source=invoice id={} userId={} providerTxId={} " +
                 "amountCents={} currency={} status={}",
             tx.id,
@@ -126,7 +126,7 @@ class PaymentTransactionService(
         }
         tx.rawPayload = session.toJson()
         paymentTransactionRepository.save(tx)
-        log.info(
+        log.error(
             "Payment transaction upserted source=connect_checkout id={} userId={} providerTxId={} " +
                 "purpose={} amountCents={} currency={} status={}",
             tx.id,
@@ -147,7 +147,7 @@ class PaymentTransactionService(
             ?: return
         tx.status = "REFUNDED"
         paymentTransactionRepository.save(tx)
-        log.info(
+        log.error(
             "Payment transaction refunded id={} userId={} providerTxId={} amountCents={} currency={}",
             tx.id,
             tx.userId,
