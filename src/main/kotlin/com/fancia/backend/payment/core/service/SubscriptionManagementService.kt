@@ -79,6 +79,11 @@ class SubscriptionManagementService(
                     provider = PaymentProvider.GOOGLE,
                     operation = "Billing portal",
                 )
+            PaymentProvider.REFERRAL ->
+                throw SubscriptionOperationNotSupportedException(
+                    provider = PaymentProvider.REFERRAL,
+                    operation = "Billing portal",
+                )
         }
     }
 
@@ -111,6 +116,11 @@ class SubscriptionManagementService(
             PaymentProvider.GOOGLE ->
                 throw SubscriptionOperationNotSupportedException(
                     provider = PaymentProvider.GOOGLE,
+                    operation = "Cancel",
+                )
+            PaymentProvider.REFERRAL ->
+                throw SubscriptionOperationNotSupportedException(
+                    provider = PaymentProvider.REFERRAL,
                     operation = "Cancel",
                 )
             null -> throw SubscriptionNotFoundException(message = "Subscription provider missing")
@@ -166,6 +176,11 @@ class SubscriptionManagementService(
                     rawData = snapshot.rawJson,
                 ) ?: throw SubscriptionBillingException(PaymentProvider.STRIPE)
             }
+            PaymentProvider.REFERRAL ->
+                throw SubscriptionOperationNotSupportedException(
+                    provider = PaymentProvider.REFERRAL,
+                    operation = "Link subscription",
+                )
         }
 
     private fun findManagedSubscription(userId: UUID): SubscriptionResponse? =
