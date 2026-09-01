@@ -42,6 +42,7 @@ class SecurityConfiguration {
             customizer.requestMatchers(HttpMethod.GET, "/internal/connect/accounts/*").permitAll()
             customizer.requestMatchers(HttpMethod.POST, "/internal/checkout/sessions").permitAll()
             customizer.requestMatchers(HttpMethod.POST, "/internal/checkout/refunds").permitAll()
+            customizer.requestMatchers(HttpMethod.POST, "/internal/subscriptions/referral").permitAll()
             customizer.requestMatchers(HttpMethod.GET, "/api/**").permitAll()
             customizer.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
             customizer.requestMatchers("/actuator/**").permitAll()

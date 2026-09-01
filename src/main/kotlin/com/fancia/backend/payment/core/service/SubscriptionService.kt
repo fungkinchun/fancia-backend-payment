@@ -4,6 +4,7 @@ import com.fancia.backend.payment.core.entity.Subscription
 import com.fancia.backend.payment.core.repository.SubscriptionRepository
 import com.fancia.backend.payment.external.UserInternalClient
 import com.fancia.backend.payment.mapper.toDto
+import com.fancia.backend.shared.user.core.dto.GrantReferralPremiumResponse
 import com.fancia.backend.shared.user.core.dto.SubscriptionResponse
 import com.fancia.backend.shared.user.core.dto.UpdatePremiumStatusRequest
 import com.fancia.backend.shared.user.core.enums.PaymentProvider
@@ -203,6 +204,56 @@ class SubscriptionService(
             .findByProviderAndProviderSubscriptionId(provider, providerSubscriptionId)
             .orElse(null)
             ?.userId
+    }
+
+    @Transactional
+    fun grantReferralPremium(userId: UUID, days: Long = 30): GrantReferralPremiumResponse {
+        require(days > 0) { "days must be positive" }
+        val now = LocalDateTime.now()
+        val providerSubscriptionId = "referral:$userId"
+
+        val currentBestExpiry = subscriptionRepository.findByUserId(userId)
+            .asSequence()
+            .filter { it.status in premiumStatuses }
+            .mapNotNull { it.expiresAt }
+            .filter { it.isAfter(now) }
+            .maxOrNull()
+
+        val base = currentBestExpiry?.takeIf { it.isAfter(now) } ?: now
+        val newExpires = base.plusDays(days)
+
+        val existing = subscriptionRepository
+            .findByProviderAndProviderSubscriptionId(PaymentProvider.REFERRAL, providerSubscriptionId)
+            .orElse(null)
+
+        val subscription = existing ?: Subscription().apply {
+            this.userId = userId
+            this.provider = PaymentProvider.REFERRAL
+            this.providerSubscriptionId = providerSubscriptionId
+            this.productId = "referral_month"
+            this.createdBy = userId
+        }
+
+        subscription.userId = userId
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.expiresAt = newExpires
+        subscription.productId = "referral_month"
+
+        val saved = subscriptionRepository.save(subscription)
+        syncUserPremium(userId)
+        publishChange(saved)
+        log.info(
+            "Granted referral premium userId={} expiresAt={} (+{}d from {})",
+            userId,
+            newExpires,
+            days,
+            base,
+        )
+        return GrantReferralPremiumResponse(
+            userId = userId,
+            premiumActive = true,
+            premiumExpiresAt = newExpires,
+        )
     }
 
     private fun syncUserPremium(userId: UUID) {
