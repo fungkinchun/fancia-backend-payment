@@ -4,11 +4,8 @@ create table "authorization_consents" (authorities varchar(1000), "client_id" va
 create table "authorizations" (access_token_expires_at timestamp(6) with time zone, access_token_issued_at timestamp(6) with time zone, authorization_code_expires_at timestamp(6) with time zone, authorization_code_issued_at timestamp(6) with time zone, device_code_expires_at timestamp(6) with time zone, device_code_issued_at timestamp(6) with time zone, oidc_id_token_expires_at timestamp(6) with time zone, oidc_id_token_issued_at timestamp(6) with time zone, refresh_token_expires_at timestamp(6) with time zone, refresh_token_issued_at timestamp(6) with time zone, user_code_expires_at timestamp(6) with time zone, user_code_issued_at timestamp(6) with time zone, state varchar(500), access_token_scopes varchar(1000), authorized_scopes varchar(1000), access_token_metadata varchar(2000), device_code_metadata varchar(2000), oidc_id_token_claims varchar(2000), oidc_id_token_metadata varchar(2000), refresh_token_metadata varchar(2000), user_code_metadata varchar(2000), access_token_value varchar(32600), attributes varchar(32600), authorization_code_value varchar(32600), device_code_value varchar(32600), oidc_id_token_value varchar(32600), refresh_token_value varchar(32600), user_code_value varchar(32600), access_token_type varchar(255), authorization_code_metadata varchar(255), authorization_grant_type varchar(255), "client_id" varchar(255), id varchar(255) not null, principal_name varchar(255), primary key (id));
 create table "clients" (client_id_issued_at timestamp(6) with time zone, client_secret_expires_at timestamp(6) with time zone, authorization_grant_types varchar(1000), client_authentication_methods varchar(1000), post_logout_redirect_uris varchar(1000), redirect_uris varchar(1000), scopes varchar(1000), client_settings varchar(2000), token_settings varchar(2000), client_id varchar(255) unique, client_name varchar(255), client_secret varchar(255), id varchar(255) not null, primary key (id));
 create table password_reset_tokens (deleted boolean not null, email_sent boolean not null, created_at timestamp(6), expires_at timestamp(6), created_by uuid, id uuid not null, "user_id" uuid, token varchar(255), primary key (id));
-create table privilege (deleted boolean not null, created_at timestamp(6), created_by uuid, id uuid not null, name varchar(255) not null unique, primary key (id));
 create table user_connected_accounts (deleted boolean not null, connected_at timestamp(6), created_at timestamp(6), created_by uuid, id uuid not null, user_id uuid, provider varchar(255), provider_id varchar(255), primary key (id));
-create table uploaded_file (deleted boolean not null, created_at timestamp(6), size bigint, uploaded_at timestamp(6), created_by uuid, id uuid not null, "user_id" uuid, extension varchar(255), original_file_name varchar(255), url varchar(255), primary key (id));
 create table user_links (user_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK'))), url varchar(255) not null, primary key (user_id, type, url));
-create table user_privileges (privilege_id uuid not null, user_id uuid not null, primary key (privilege_id, user_id));
 create table "users" (
     deleted boolean not null,
     status varchar(16) not null default 'REGISTERED' check (status in ('REGISTERED', 'ACTIVE', 'INACTIVE')),
@@ -39,7 +36,6 @@ create table verification_codes (deleted boolean not null, email_sent boolean no
 alter table if exists "authorization_consents" add constraint FK7u3rrcx79xyss37m2551mpx2p foreign key ("client_id") references "clients";
 alter table if exists "authorizations" add constraint FK4ehcr3h1eun20h36is62nal65 foreign key ("client_id") references "clients";
 alter table if exists password_reset_tokens add constraint FKrjxrqd0dudi212f0469dojcod foreign key ("user_id") references "users";
-alter table if exists uploaded_file add constraint FKqhosch3tnq7i2it0mea57ts4m foreign key ("user_id") references "users";
 alter table if exists user_connected_accounts add constraint FKnnce63ye8wbmdskoeco5ku43d foreign key (user_id) references "users";
 create table stripe_connected_accounts (
     id uuid not null,
@@ -67,8 +63,6 @@ create unique index uk_user_connected_accounts_stripe_provider_id
 alter table if exists user_links add constraint FK4wc3hhebo87m149hnxkxxmfvm foreign key (user_id) references "users";
 alter table if exists user_tags add constraint FK_user_tags_user foreign key (user_id) references "users";
 alter table if exists user_settings add constraint FK_user_settings_user foreign key (user_id) references "users";
-alter table if exists user_privileges add constraint FK6rrv8daxxrco69tdpfu3a29le foreign key (privilege_id) references privilege;
-alter table if exists user_privileges add constraint FKobuc3eaoytxqaj534be5b7xqs foreign key (user_id) references "users";
 alter table if exists verification_codes add constraint FK2c664upaiv1f6h7e5ueyy1ae3 foreign key ("user_id") references "users";
 
 create table comment_likes (liked_at timestamp(6), comment_id uuid not null, user_id uuid not null, primary key (comment_id, user_id));
@@ -143,10 +137,10 @@ create table interest_groups (
     primary key (id)
 );
 create table interest_group_links (interest_group_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK'))), url varchar(255) not null, primary key (interest_group_id, type, url));
-create table interest_group_membership (joined_at timestamp(6), interest_group_id uuid not null, user_id uuid not null, role varchar(255) check ((role in ('ADMIN','MEMBER'))), status varchar(255) check ((status in ('ACCEPTED','PENDING','DENIED','WITHDREW','BANNED'))), primary key (interest_group_id, user_id));
+create table interest_group_memberships (joined_at timestamp(6), interest_group_id uuid not null, user_id uuid not null, role varchar(255) check ((role in ('ADMIN','MEMBER'))), status varchar(255) check ((status in ('ACCEPTED','PENDING','DENIED','WITHDREW','BANNED'))), primary key (interest_group_id, user_id));
 create table interest_group_tags (interest_group_id uuid not null, tag_id uuid not null, primary key (interest_group_id, tag_id));
 alter table if exists interest_group_links add constraint FK3519psi1d5n0prhs7ectxqyfy foreign key (interest_group_id) references interest_groups;
-alter table if exists interest_group_membership add constraint FK969x3gmh9kq16vevdr74h0t3g foreign key (interest_group_id) references interest_groups;
+alter table if exists interest_group_memberships add constraint FK969x3gmh9kq16vevdr74h0t3g foreign key (interest_group_id) references interest_groups;
 alter table if exists interest_group_tags add constraint FKcbscsmlvmrmdqc0ih8c6dlgkk foreign key (interest_group_id) references interest_groups;
 
 create table venues (
@@ -303,7 +297,6 @@ create table events (
 );
 create index events_event_type_idx on events (event_type) where deleted = false;
 create table event_interest_groups (event_id uuid not null, event_interest_groups uuid);
-create table event_venues (event_id uuid not null, event_venues uuid);
 create table event_tags (event_id uuid not null, tag_id uuid not null, primary key (event_id, tag_id));
 create table event_links (event_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK','ZOOM','TEAMS','GOOGLE_MEET'))), url varchar(255) not null, primary key (event_id, type, url));
 create table event_occurrences (
@@ -384,7 +377,6 @@ create index idx_reservations_occurrence_accepted_token
     on reservations (occurrence_id)
     where status = 'ACCEPTED' and check_in_token is not null;
 alter table if exists event_interest_groups add constraint FK9pyxt3n5c0gtivo6y3nxyw5fg foreign key (event_id) references events;
-alter table if exists event_venues add constraint FKevent_venues_event foreign key (event_id) references events;
 alter table if exists event_tags add constraint FKiwoyitw224ykom58m5xnoa9y6 foreign key (event_id) references events;
 alter table if exists event_links add constraint fk_event_links_event foreign key (event_id) references events;
 create index events_geo_idx on events using gist (
