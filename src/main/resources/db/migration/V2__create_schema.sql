@@ -36,14 +36,6 @@ create table tags (deleted boolean not null, created_at timestamp(6), created_by
 create table user_tags (user_id uuid not null, tag_id uuid not null, primary key (user_id, tag_id));
 create table user_settings (user_id uuid primary key, privacy jsonb not null default '{}', notifications jsonb not null default '{}');
 create table verification_codes (deleted boolean not null, email_sent boolean not null, created_at timestamp(6), created_by uuid, id uuid not null, "user_id" uuid unique, code varchar(255), primary key (id));
-create table user_blacklist_ids (
-    user_id uuid not null,
-    blacklisted_id uuid not null,
-    primary key (user_id, blacklisted_id),
-    constraint fk_user_blacklist_ids_user foreign key (user_id) references "users" (id)
-);
-create index user_blacklist_ids_blacklisted_id_idx on user_blacklist_ids (blacklisted_id);
-
 alter table if exists "authorization_consents" add constraint FK7u3rrcx79xyss37m2551mpx2p foreign key ("client_id") references "clients";
 alter table if exists "authorizations" add constraint FK4ehcr3h1eun20h36is62nal65 foreign key ("client_id") references "clients";
 alter table if exists password_reset_tokens add constraint FKrjxrqd0dudi212f0469dojcod foreign key ("user_id") references "users";
@@ -138,7 +130,18 @@ create table post_poll_votes (
 
 create index post_poll_votes_post_user_idx on post_poll_votes (post_id, user_id);
 
-create table interest_groups (deleted boolean not null, created_at timestamp(6), created_by uuid, id uuid not null, description varchar(4000) not null, name varchar(255) not null, slug varchar(255) not null, primary key (id));
+create table interest_groups (
+    deleted boolean not null,
+    created_at timestamp(6),
+    created_by uuid,
+    id uuid not null,
+    description varchar(4000) not null,
+    name varchar(255) not null,
+    slug varchar(255) not null,
+    visibility varchar(16) not null default 'PUBLIC'
+        check (visibility in ('PUBLIC', 'PRIVATE')),
+    primary key (id)
+);
 create table interest_group_links (interest_group_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK'))), url varchar(255) not null, primary key (interest_group_id, type, url));
 create table interest_group_membership (joined_at timestamp(6), interest_group_id uuid not null, user_id uuid not null, role varchar(255) check ((role in ('ADMIN','MEMBER'))), status varchar(255) check ((status in ('ACCEPTED','PENDING','DENIED','WITHDREW','BANNED'))), primary key (interest_group_id, user_id));
 create table interest_group_tags (interest_group_id uuid not null, tag_id uuid not null, primary key (interest_group_id, tag_id));
@@ -146,7 +149,26 @@ alter table if exists interest_group_links add constraint FK3519psi1d5n0prhs7ect
 alter table if exists interest_group_membership add constraint FK969x3gmh9kq16vevdr74h0t3g foreign key (interest_group_id) references interest_groups;
 alter table if exists interest_group_tags add constraint FKcbscsmlvmrmdqc0ih8c6dlgkk foreign key (interest_group_id) references interest_groups;
 
-create table venues (deleted boolean not null, latitude double precision, longitude double precision, created_at timestamp(6), created_by uuid, id uuid not null, postcode varchar(50), country varchar(100), address_line varchar(500), location_label varchar(500), description varchar(4000) not null, city varchar(255), name varchar(255) not null, slug varchar(255) not null, place_id varchar(255), primary key (id));
+create table venues (
+    deleted boolean not null,
+    latitude double precision,
+    longitude double precision,
+    created_at timestamp(6),
+    created_by uuid,
+    id uuid not null,
+    postcode varchar(50),
+    country varchar(100),
+    address_line varchar(500),
+    location_label varchar(500),
+    description varchar(4000) not null,
+    city varchar(255),
+    name varchar(255) not null,
+    slug varchar(255) not null,
+    place_id varchar(255),
+    visibility varchar(16) not null default 'PUBLIC'
+        check (visibility in ('PUBLIC', 'PRIVATE')),
+    primary key (id)
+);
 create table venue_links (venue_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK','ZOOM','TEAMS','GOOGLE_MEET'))), url varchar(255) not null, primary key (venue_id, type, url));
 create table venue_staff (joined_at timestamp(6), venue_id uuid not null, user_id uuid not null, role varchar(255) check ((role in ('ADMIN','MEMBER'))), status varchar(255) check ((status in ('ACCEPTED','PENDING','DENIED','WITHDREW','BANNED'))), primary key (venue_id, user_id));
 create table venue_tags (venue_id uuid not null, tag_id uuid not null, primary key (venue_id, tag_id));
@@ -577,3 +599,62 @@ create table user_slug_history (
     constraint fk_user_slug_history_user foreign key (user_id) references users (id)
 );
 create index idx_user_slug_history_user_id on user_slug_history (user_id);
+
+create table if not exists referrals (
+    id uuid not null,
+    deleted boolean not null default false,
+    created_at timestamp(6),
+    created_by uuid,
+    referrer_user_id uuid not null,
+    referee_user_id uuid not null,
+    referrer_slug varchar(255) not null,
+    rewarded_at timestamp(6) not null,
+    primary key (id),
+    constraint fk_referrals_referrer foreign key (referrer_user_id) references users (id),
+    constraint fk_referrals_referee foreign key (referee_user_id) references users (id)
+);
+
+create unique index if not exists uk_referrals_referee on referrals (referee_user_id) where deleted = false;
+create index if not exists idx_referrals_referrer on referrals (referrer_user_id) where deleted = false;
+
+create table if not exists blocked_resources (
+    user_id uuid not null,
+    resource_type varchar(32) not null
+        check (resource_type in ('USER', 'POST', 'COMMENT', 'EVENT', 'INTEREST_GROUP', 'VENUE', 'TAG')),
+    resource_id uuid not null,
+    created_at timestamp(6),
+    primary key (user_id, resource_type, resource_id)
+);
+
+create index if not exists idx_blocked_resources_user_type
+    on blocked_resources (user_id, resource_type);
+
+create table if not exists reports (
+    id uuid not null,
+    deleted boolean not null default false,
+    created_at timestamp(6),
+    created_by uuid,
+    reporter_user_id uuid not null,
+    target_type varchar(32) not null
+        check (target_type in ('USER', 'POST', 'COMMENT', 'EVENT', 'INTEREST_GROUP', 'VENUE', 'TAG')),
+    target_id uuid not null,
+    reason varchar(32) not null
+        check (reason in ('SPAM', 'HARASSMENT', 'HATE', 'SEXUAL', 'VIOLENCE', 'SCAM', 'OTHER')),
+    details varchar(2000),
+    status varchar(16) not null default 'OPEN'
+        check (status in ('OPEN', 'REVIEWED', 'DISMISSED', 'ACTIONED')),
+    primary key (id)
+);
+
+create index if not exists idx_reports_reporter on reports (reporter_user_id) where deleted = false;
+create index if not exists idx_reports_target on reports (target_type, target_id) where deleted = false;
+
+create table if not exists saved_resources (
+    user_id uuid not null,
+    resource_id uuid not null,
+    created_at timestamp(6),
+    primary key (user_id, resource_id)
+);
+
+create index if not exists idx_saved_resources_user_created
+    on saved_resources (user_id, created_at desc);
