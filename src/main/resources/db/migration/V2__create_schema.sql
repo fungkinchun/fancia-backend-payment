@@ -299,22 +299,42 @@ create index events_event_type_idx on events (event_type) where deleted = false;
 create table event_interest_groups (event_id uuid not null, event_interest_groups uuid);
 create table event_tags (event_id uuid not null, tag_id uuid not null, primary key (event_id, tag_id));
 create table event_links (event_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK','ZOOM','TEAMS','GOOGLE_MEET'))), url varchar(255) not null, primary key (event_id, type, url));
+create table event_time_slots (
+    id uuid not null,
+    deleted boolean not null default false,
+    created_at timestamp(6),
+    created_by uuid,
+    event_id uuid not null,
+    start_time timestamp(6) not null,
+    end_time timestamp(6) not null,
+    sort_order integer not null default 0,
+    primary key (id),
+    constraint fk_event_time_slots_event foreign key (event_id) references events (id),
+    constraint event_time_slots_time_check check (end_time > start_time),
+    constraint uk_event_time_slots_event_start unique (event_id, start_time)
+);
+create index event_time_slots_event_id_idx on event_time_slots (event_id);
 create table event_occurrences (
     deleted boolean not null default false,
     created_at timestamp(6),
     created_by uuid,
     id uuid not null,
     event_id uuid not null,
+    time_slot_id uuid,
     start_time timestamp(6) not null,
     end_time timestamp(6) not null,
     status varchar(32) not null default 'SCHEDULED'
         check (status in ('SCHEDULED', 'CANCELLED')),
     primary key (id),
     constraint uk_event_occurrences_event_start unique (event_id, start_time),
-    constraint fk_event_occurrences_event foreign key (event_id) references events (id)
+    constraint fk_event_occurrences_event foreign key (event_id) references events (id),
+    constraint fk_event_occurrences_time_slot
+        foreign key (time_slot_id) references event_time_slots (id)
+        on delete set null
 );
 create index event_occurrences_event_id_idx on event_occurrences (event_id);
 create index event_occurrences_start_time_idx on event_occurrences (start_time);
+create index event_occurrences_time_slot_id_idx on event_occurrences (time_slot_id);
 create table event_participants (
     occurrence_id uuid not null,
     user_id uuid not null,
@@ -592,7 +612,7 @@ create table user_slug_history (
 );
 create index idx_user_slug_history_user_id on user_slug_history (user_id);
 
-create table if not exists referrals (
+create table referrals (
     id uuid not null,
     deleted boolean not null default false,
     created_at timestamp(6),
@@ -606,10 +626,10 @@ create table if not exists referrals (
     constraint fk_referrals_referee foreign key (referee_user_id) references users (id)
 );
 
-create unique index if not exists uk_referrals_referee on referrals (referee_user_id) where deleted = false;
-create index if not exists idx_referrals_referrer on referrals (referrer_user_id) where deleted = false;
+create unique index uk_referrals_referee on referrals (referee_user_id) where deleted = false;
+create index idx_referrals_referrer on referrals (referrer_user_id) where deleted = false;
 
-create table if not exists blocked_resources (
+create table blocked_resources (
     user_id uuid not null,
     resource_type varchar(32) not null
         check (resource_type in ('USER', 'POST', 'COMMENT', 'EVENT', 'INTEREST_GROUP', 'VENUE', 'TAG')),
@@ -618,10 +638,10 @@ create table if not exists blocked_resources (
     primary key (user_id, resource_type, resource_id)
 );
 
-create index if not exists idx_blocked_resources_user_type
+create index idx_blocked_resources_user_type
     on blocked_resources (user_id, resource_type);
 
-create table if not exists reports (
+create table reports (
     id uuid not null,
     deleted boolean not null default false,
     created_at timestamp(6),
@@ -638,15 +658,15 @@ create table if not exists reports (
     primary key (id)
 );
 
-create index if not exists idx_reports_reporter on reports (reporter_user_id) where deleted = false;
-create index if not exists idx_reports_target on reports (target_type, target_id) where deleted = false;
+create index idx_reports_reporter on reports (reporter_user_id) where deleted = false;
+create index idx_reports_target on reports (target_type, target_id) where deleted = false;
 
-create table if not exists saved_resources (
+create table saved_resources (
     user_id uuid not null,
     resource_id uuid not null,
     created_at timestamp(6),
     primary key (user_id, resource_id)
 );
 
-create index if not exists idx_saved_resources_user_created
+create index idx_saved_resources_user_created
     on saved_resources (user_id, created_at desc);
