@@ -134,6 +134,7 @@ create table interest_groups (
     slug varchar(255) not null,
     visibility varchar(16) not null default 'PUBLIC'
         check (visibility in ('PUBLIC', 'PRIVATE')),
+    invite_token varchar(64),
     primary key (id)
 );
 create table interest_group_links (interest_group_id uuid not null, type varchar(50) not null check ((type in ('WEBSITE','INSTAGRAM','FACEBOOK','TWITTER','LINKEDIN','YOUTUBE','TIKTOK'))), url varchar(255) not null, primary key (interest_group_id, type, url));
@@ -288,6 +289,7 @@ create table events (
     event_type varchar(32) not null default 'REGULAR'
         check (event_type in ('REGULAR', 'SPONTANEOUS')),
     visibility varchar(255) not null check ((visibility in ('PUBLIC','GROUP','PRIVATE'))),
+    invite_token varchar(64),
     recurrence_frequency varchar(32) not null default 'NONE',
     recurrence_days_mask smallint not null default 0,
     recurrence_paused_until timestamp(6) with time zone,
@@ -599,8 +601,10 @@ create index chat_channel_members_user_id_idx on chat_channel_members (user_id);
 create index chat_channel_members_chat_channel_id_idx on chat_channel_members (chat_channel_id);
 
 create unique index uk_events_slug on events (slug) where deleted = false;
+create unique index uk_events_invite_token on events (invite_token) where invite_token is not null and deleted = false;
 create unique index uk_venues_slug on venues (slug) where deleted = false;
 create unique index uk_interest_groups_slug on interest_groups (slug) where deleted = false;
+create unique index uk_interest_groups_invite_token on interest_groups (invite_token) where invite_token is not null and deleted = false;
 create unique index uk_users_slug on users (slug) where deleted = false and slug is not null;
 
 create table user_slug_history (
