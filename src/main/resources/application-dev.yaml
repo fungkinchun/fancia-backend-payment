@@ -14,7 +14,6 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${AUTH_SERVICE_URL:auth-service}
-          jwk-set-uri: ${AUTH_SERVICE_URL:auth-service}/oauth2/jwks
   mvc:
     cors:
       mappings:
@@ -23,6 +22,7 @@ spring:
             - "http://localhost:3000"
             - "https://fancia.co.uk"
             - "https://www.fancia.co.uk"
+            - "https://dev.fancia.co.uk"
           allowed-methods:
             - GET
             - POST
@@ -46,12 +46,14 @@ spring:
     driver-class-name: ${DATABASE_DRIVER:com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver}
     hikari:
       allow-pool-suspension: true
-      maximum-pool-size: ${MAX_POOL_SIZE:10}
-      minimum-idle: ${MIN_IDLE:10}
-      connection-timeout: 10000
-      validation-timeout: 5000
-      max-lifetime: 480000
-      keepalive-time: 120000
+      maximum-pool-size: "${MAX_POOL_SIZE:2}"
+      minimum-idle: "${MIN_IDLE:0}"
+      connection-timeout: 5000
+      validation-timeout: 1000
+      idle-timeout: 60000
+      max-lifetime: 180000
+      keepalive-time: 0
+      initialization-fail-timeout: "-1"
   jpa:
     properties:
       hibernate:
@@ -109,12 +111,13 @@ spring:
       gis_admin_password: ${GIS_ADMIN_PASSWORD}
 app:
   application-name: ${PROJECT_NAME}-backend-${REPO_NAME}
-  base-url: ${DOMAIN_NAME}/${REPO_NAME}/api
+  base-url: ${DOMAIN_NAME}/${REPO_NAME}/api/v1
   login-page-url: ${AUTH_SERVICE_URL:auth-service}/login
   allowed-origins:
     - "http://localhost:3000"
     - "https://fancia.co.uk"
     - "https://www.fancia.co.uk"
+    - "https://dev.fancia.co.uk"
   apple:
     bundle-id: ${APPLE_BUNDLE_ID:}
     verify-signature: ${APPLE_VERIFY_SIGNATURE:true}

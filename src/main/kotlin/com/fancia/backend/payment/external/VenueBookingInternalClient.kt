@@ -10,7 +10,7 @@ import java.util.UUID
 
 @FeignClient(
     name = "venue-internal-service",
-    path = "/internal/venue-bookings",
+    path = "/internal/v1/venue-bookings",
     configuration = [FeignConfig::class],
 )
 interface VenueBookingInternalClient {

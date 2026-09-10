@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/internal/subscriptions")
+@RequestMapping("/internal/v1/subscriptions")
 @Tag(name = "Subscriptions (internal)", description = "Service-to-service subscription grants")
 class SubscriptionInternalController(
     private val subscriptionService: SubscriptionService,

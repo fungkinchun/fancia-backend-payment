@@ -674,3 +674,16 @@ create table saved_resources (
 
 create index idx_saved_resources_user_created
     on saved_resources (user_id, created_at desc);
+
+create table resource_ratings (
+    resource_type varchar(32) not null
+        check (resource_type in ('EVENT', 'INTEREST_GROUP', 'VENUE')),
+    resource_id uuid not null,
+    user_id uuid not null,
+    stars integer not null check (stars >= 1 and stars <= 5),
+    updated_at timestamp(6),
+    primary key (resource_type, resource_id, user_id)
+);
+
+create index idx_resource_ratings_resource
+    on resource_ratings (resource_type, resource_id);

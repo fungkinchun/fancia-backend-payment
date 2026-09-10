@@ -1,7 +1,5 @@
 rootProject.name = "payment"
 
-// Prefer local composite builds when sibling repos are present (workspace).
-// CI publishes/consumes CodeArtifact artifacts instead.
 val sharedCommon = file("../shared-common")
 if (sharedCommon.exists()) {
     includeBuild(sharedCommon) {

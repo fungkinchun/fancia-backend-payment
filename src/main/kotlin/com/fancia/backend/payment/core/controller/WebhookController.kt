@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/webhooks")
+@RequestMapping("/api/v1/webhooks")
 @Tag(name = "Webhooks", description = "Provider subscription webhooks (Apple, Google, Stripe)")
 class WebhookController(
     private val appleWebhookService: AppleWebhookService,

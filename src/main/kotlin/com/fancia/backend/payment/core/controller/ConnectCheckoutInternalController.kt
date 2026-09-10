@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/internal/checkout")
+@RequestMapping("/internal/v1/checkout")
 @Hidden
 class ConnectCheckoutInternalController(
     private val connectCheckoutService: ConnectCheckoutService,

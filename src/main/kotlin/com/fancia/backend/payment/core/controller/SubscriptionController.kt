@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/subscriptions")
+@RequestMapping("/api/v1/subscriptions")
 @Tag(name = "Subscriptions", description = "Provider-agnostic subscription management and status")
 @SecurityRequirement(name = "bearerAuth")
 class SubscriptionController(

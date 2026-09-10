@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/connect/accounts")
+@RequestMapping("/api/v1/connect/accounts")
 @Tag(
     name = "Connect Accounts",
     description = "Stripe Connect Express accounts used to pay venue owners and event hosts",

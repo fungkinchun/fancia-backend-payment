@@ -90,7 +90,7 @@ class ConnectAccountControllerIntegrationTest(
 
     test("internal payout readiness is false when user has no connect account") {
         val userId = UUID.randomUUID()
-        mockMvc.get("/internal/connect/accounts/{userId}", userId) {
+        mockMvc.get("/internal/v1/connect/accounts/{userId}", userId) {
             accept = APPLICATION_JSON
         }.andExpect {
             status { isOk() }
@@ -117,7 +117,7 @@ class ConnectAccountControllerIntegrationTest(
             ),
         )
 
-        mockMvc.post("/api/connect/accounts/onboarding") {
+        mockMvc.post("/api/v1/connect/accounts/onboarding") {
             with(jwtFor(userId))
             content = jsonMapper.writeValueAsString(
                 mapOf(
@@ -148,7 +148,7 @@ class ConnectAccountControllerIntegrationTest(
             ),
         ).thenReturn(StripeHostedLink(url = "https://connect.stripe.com/setup/test", expiresAt = null))
 
-        mockMvc.post("/api/connect/accounts/onboarding") {
+        mockMvc.post("/api/v1/connect/accounts/onboarding") {
             with(jwtFor(userId))
             content = jsonMapper.writeValueAsString(
                 mapOf(
@@ -160,7 +160,7 @@ class ConnectAccountControllerIntegrationTest(
             accept = APPLICATION_JSON
         }.andExpect { status { isOk() } }
 
-        mockMvc.get("/api/connect/accounts/me") {
+        mockMvc.get("/api/v1/connect/accounts/me") {
             with(jwtFor(userId))
             accept = APPLICATION_JSON
         }.andExpect {
@@ -174,7 +174,7 @@ class ConnectAccountControllerIntegrationTest(
             snapshot(userId = userId, ready = true),
         )
 
-        mockMvc.post("/api/connect/accounts/me/refresh") {
+        mockMvc.post("/api/v1/connect/accounts/me/refresh") {
             with(jwtFor(userId))
             accept = APPLICATION_JSON
         }.andExpect {
@@ -185,7 +185,7 @@ class ConnectAccountControllerIntegrationTest(
             jsonPath("$.detailsSubmitted", `is`(true))
         }
 
-        mockMvc.get("/internal/connect/accounts/{userId}", userId) {
+        mockMvc.get("/internal/v1/connect/accounts/{userId}", userId) {
             accept = APPLICATION_JSON
         }.andExpect {
             status { isOk() }
@@ -206,7 +206,7 @@ class ConnectAccountControllerIntegrationTest(
             ),
         ).thenReturn(StripeHostedLink(url = "https://connect.stripe.com/setup/test", expiresAt = null))
 
-        mockMvc.post("/api/connect/accounts/onboarding") {
+        mockMvc.post("/api/v1/connect/accounts/onboarding") {
             with(jwtFor(userId))
             content = jsonMapper.writeValueAsString(
                 mapOf(
@@ -218,7 +218,7 @@ class ConnectAccountControllerIntegrationTest(
             accept = APPLICATION_JSON
         }.andExpect { status { isOk() } }
 
-        mockMvc.post("/api/connect/accounts/me/dashboard") {
+        mockMvc.post("/api/v1/connect/accounts/me/dashboard") {
             with(jwtFor(userId))
             accept = APPLICATION_JSON
         }.andExpect {

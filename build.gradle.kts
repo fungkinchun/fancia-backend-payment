@@ -82,13 +82,10 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus:1.16.4")
     implementation("org.springframework.boot:spring-boot-starter-flyway:4.0.5")
     implementation("org.flywaydb:flyway-database-postgresql")
-    // Apple JWS + Google Pub/Sub OIDC
     implementation("com.nimbusds:nimbus-jose-jwt:9.40")
-    // Google Play Developer API
     implementation("com.google.apis:google-api-services-androidpublisher:v3-rev20260528-2.0.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.30.0")
     implementation("com.google.http-client:google-http-client-gson:1.45.0")
-    // Stripe webhooks + Subscription retrieve
     implementation("com.stripe:stripe-java:33.1.1")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

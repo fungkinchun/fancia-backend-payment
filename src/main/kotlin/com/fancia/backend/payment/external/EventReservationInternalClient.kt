@@ -10,7 +10,7 @@ import java.util.UUID
 
 @FeignClient(
     name = "event-internal-service",
-    path = "/internal",
+    path = "/internal/v1",
     configuration = [FeignConfig::class],
 )
 interface EventReservationInternalClient {

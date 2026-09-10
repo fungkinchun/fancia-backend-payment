@@ -73,7 +73,7 @@ class SubscriptionReferralIntegrationTest(
 
     fun stubUserPremiumUpdate(userId: UUID) {
         stubFor(
-            put(urlPathMatching("/internal/users/.*/premium"))
+            put(urlPathMatching("/internal/v1/users/.*/premium"))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -96,7 +96,7 @@ class SubscriptionReferralIntegrationTest(
         stubUserPremiumUpdate(userId)
 
         val before = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
-        mockMvc.post("/internal/subscriptions/referral") {
+        mockMvc.post("/internal/v1/subscriptions/referral") {
             content = jsonMapper.writeValueAsString(
                 mapOf(
                     "userId" to userId.toString(),
@@ -120,7 +120,7 @@ class SubscriptionReferralIntegrationTest(
         saved.productId shouldBe "referral_month"
         saved.expiresAt!!.isAfter(before.plusDays(29)) shouldBe true
         saved.expiresAt!!.isBefore(after.plusDays(31)) shouldBe true
-        verify(putRequestedFor(urlPathMatching("/internal/users/.*/premium")))
+        verify(putRequestedFor(urlPathMatching("/internal/v1/users/.*/premium")))
     }
 
     test("should stack referral premium onto existing entitlement") {
@@ -143,7 +143,7 @@ class SubscriptionReferralIntegrationTest(
             )
         }
 
-        mockMvc.post("/internal/subscriptions/referral") {
+        mockMvc.post("/internal/v1/subscriptions/referral") {
             content = jsonMapper.writeValueAsString(
                 mapOf(
                     "userId" to userId.toString(),
@@ -184,7 +184,7 @@ class SubscriptionReferralIntegrationTest(
             )
         }
 
-        mockMvc.post("/internal/subscriptions/referral") {
+        mockMvc.post("/internal/v1/subscriptions/referral") {
             content = jsonMapper.writeValueAsString(
                 mapOf(
                     "userId" to userId.toString(),

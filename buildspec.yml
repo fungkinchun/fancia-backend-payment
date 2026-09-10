@@ -29,7 +29,7 @@ phases:
   build:
     commands:
       - echo Building Kotlin project...
-      - export SPRING_PROFILES_ACTIVE=dev
+      - export SPRING_PROFILES_ACTIVE=$ENV
       - |
         if [ "$USE_EKS" = "true" ]; then
           ./gradlew build --info --stacktrace
@@ -46,9 +46,9 @@ phases:
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
         
             echo "Build successful! Proceeding to Docker push..."
-            docker build -t $PROJECT_NAME-backend-$REPO_NAME:latest .
-            docker tag $PROJECT_NAME-backend-$REPO_NAME:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME-backend-$REPO_NAME:latest
-            docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME-backend-$REPO_NAME:latest
+            docker build -t $PROJECT_NAME-$ENV-backend-$REPO_NAME:latest .
+            docker tag $PROJECT_NAME-$ENV-backend-$REPO_NAME:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME-$ENV-backend-$REPO_NAME:latest
+            docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PROJECT_NAME-$ENV-backend-$REPO_NAME:latest
             echo "Build and publish completed."
           else
             echo "Uploading Lambda ZIP to S3..."

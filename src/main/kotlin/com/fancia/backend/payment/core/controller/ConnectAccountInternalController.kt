@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/internal/connect/accounts")
+@RequestMapping("/internal/v1/connect/accounts")
 @Tag(name = "Connect Accounts (internal)", description = "Service-to-service payout readiness checks")
 class ConnectAccountInternalController(
     private val connectAccountService: ConnectAccountService,

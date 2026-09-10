@@ -42,12 +42,14 @@ spring:
     driver-class-name: ${DATABASE_DRIVER:com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver}
     hikari:
       allow-pool-suspension: true
-      maximum-pool-size: ${MAX_POOL_SIZE:5}
-      minimum-idle: ${MIN_IDLE:0}
-      connection-timeout: 10000
-      validation-timeout: 5000
-      max-lifetime: 480000
-      keepalive-time: 120000
+      maximum-pool-size: "${MAX_POOL_SIZE:2}"
+      minimum-idle: "${MIN_IDLE:0}"
+      connection-timeout: 5000
+      validation-timeout: 1000
+      idle-timeout: 60000
+      max-lifetime: 180000
+      keepalive-time: 0
+      initialization-fail-timeout: "-1"
   jpa:
     show-sql: true
     properties:
