@@ -22,7 +22,7 @@ class SecurityConfiguration {
         val defaultResolver = DefaultBearerTokenResolver()
         return BearerTokenResolver { request ->
             val path = request.requestURI.removePrefix(request.contextPath ?: "")
-            if (path.startsWith("/api/webhooks/")) {
+            if (path.startsWith("/api/v1/webhooks/") || path.startsWith("/api/webhooks/")) {
                 null
             } else {
                 defaultResolver.resolve(request)
@@ -37,8 +37,8 @@ class SecurityConfiguration {
     ): SecurityFilterChain {
         http.authorizeHttpRequests { customizer ->
             customizer.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            customizer.requestMatchers(HttpMethod.POST, "/api/webhooks/**").permitAll()
-            customizer.requestMatchers("/api/connect", "/api/connect/**").authenticated()
+            customizer.requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
+            customizer.requestMatchers("/api/v1/connect", "/api/v1/connect/**").authenticated()
             customizer.requestMatchers(HttpMethod.GET, "/internal/v1/connect/accounts/*").permitAll()
             customizer.requestMatchers(HttpMethod.POST, "/internal/v1/checkout/sessions").permitAll()
             customizer.requestMatchers(HttpMethod.POST, "/internal/v1/checkout/refunds").permitAll()
