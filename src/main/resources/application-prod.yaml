@@ -5,10 +5,7 @@ server:
 spring:
   config:
     import:
-      - aws-secretsmanager:${ENV}/${PROJECT_NAME}/kafka
-      - aws-secretsmanager:${ENV}/${PROJECT_NAME}/oauth2
-      - aws-secretsmanager:${ENV}/${PROJECT_NAME}/gis
-      - optional:aws-secretsmanager:${ENV}/${PROJECT_NAME}/payment
+      - aws-secretsmanager:${ENV}/${PROJECT_NAME}/app
   security:
     oauth2:
       resourceserver:
